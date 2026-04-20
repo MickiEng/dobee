@@ -362,7 +362,7 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Sego
 <div id="s-weekly" class="screen">
   <div class="app-header"><div class="app-wordmark"><svg class="hb-hex" width="20" height="22" viewBox="0 0 20 22" fill="none" xmlns="http://www.w3.org/2000/svg"><polygon points="10,1 19,5.5 19,16.5 10,21 1,16.5 1,5.5" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/><polygon points="10,5 15,7.75 15,14.25 10,17 5,14.25 5,7.75" fill="#BA7517" opacity="0.25"/></svg><span style="color:var(--hb-charcoal)">Hunny<span style="color:var(--hb-amber)">Bee</span></span></div></div>
   <div class="pad-all">
-    <div class="eyebrow">week in review</div>
+    <div class="eyebrow">this week so far</div>
     <div class="big-q" id="weekly-title">This week.</div>
     <div class="stats-row">
       <div class="stat-card"><div class="stat-label">tasks done</div><div class="stat-val" id="w-done-count">0</div></div>
@@ -387,8 +387,8 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Sego
         <input class="settings-name-input" id="settings-name" value="" onchange="saveSettingsName()" />
       </div>
       <div class="settings-row">
-        <div><div class="settings-row-label">Weekly summary day</div><div class="settings-row-sub">When you get your week in review</div></div>
-        <select class="settings-select" id="summary-day" onchange="saveState()">
+        <div><div class="settings-row-label">Reset my week on</div><div class="settings-row-sub">Weekly stats clear on this day</div></div>
+        <select class="settings-select" id="summary-day" onchange="state.resetDay=parseInt(this.value);saveState()">
           <option value="0">Sunday</option><option value="1">Monday</option><option value="2">Tuesday</option>
           <option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option>
         </select>
@@ -572,7 +572,8 @@ function defaultState(){
     weekCompleted:[], weekMinutes:0,
     currentEnergy:'mid', currentTask:null,
     streak:0, lastCheckinDate:null,
-    weekStartDate: todayStr()
+    weekStartDate: todayStr(),
+    resetDay: 1
   };
 }
 
@@ -599,7 +600,22 @@ function clearSession(){
   saveState();
 }
 
+function checkWeekReset(){
+  const today = new Date();
+  const todayDay = today.getDay(); // 0=Sun,1=Mon...
+  const resetDay = state.resetDay !== undefined ? state.resetDay : 1;
+  if(todayDay !== resetDay) return;
+  // only reset once per reset day
+  const lastReset = new Date(state.weekStartDate);
+  if(lastReset.toDateString() === today.toDateString()) return;
+  state.weekCompleted=[];
+  state.weekMinutes=0;
+  state.weekStartDate=todayStr();
+  saveState();
+}
+
 function goHome(){
+  checkWeekReset();
   clearSession();
   updateStreak();
   updateOverdueHints();
@@ -935,14 +951,14 @@ function buildWeeklySummary(){
 }
 
 function buildWeekNote(done,overdue){
-  if(done===0&&overdue===0)return'Sometimes a week just passes. Nothing logged doesn\'t mean nothing happened. Next week is a fresh start.';
-  if(done===0&&overdue>0)return'It was a tough week. A few things piled up. Start with whatever feels smallest next week.';
-  if(done>=10&&overdue===0)return'That was a solid week. You kept on top of things, nothing slipped. Go into next week the same way.';
-  if(done>=5&&overdue===0)return'A good steady week. You took care of the things that needed it and nothing got out of hand. That\'s the whole goal.';
-  if(done>=5&&overdue>0)return'You made a dent this week — that matters. A few things are still waiting but they\'re manageable.';
-  if(done>0&&overdue>2)return'A bit of a mixed week — some things got done, a few others slipped. Nothing is broken. Next week you get another go.';
-  if(done>0)return'You took care of a few things this week. Small counts. Showing up at all when life is full is the real win.';
-  return'Week done. Whatever you managed, it was enough for this week.';
+  if(done===0&&overdue===0)return'Nothing yet this week — every check-in is a fresh start.';
+  if(done===0&&overdue>0)return'A few things are waiting. No pressure — just pick one when you have it in you.';
+  if(done>=10&&overdue===0)return'Solid week so far. Nothing to do but keep it going.';
+  if(done>=5&&overdue===0)return'You\'ve taken care of a few things. Keep going when you\'re ready.';
+  if(done>=5&&overdue>0)return'Good progress so far. A few things are still waiting whenever you\'re ready for them.';
+  if(done>0&&overdue>2)return'You\'ve made a start. A few things are piling up but nothing that can\'t be picked off one at a time.';
+  if(done>0)return'You\'ve taken care of a few things. Keep going when you\'re ready.';
+  return'Still time left in the week — no rush.';
 }
 
 function startNewWeek(){
@@ -1114,6 +1130,7 @@ function navTo(screenId,navId){
     document.getElementById('bottom-nav').style.display='flex';
     document.getElementById('energy-greeting').textContent='How are you feeling right now, '+state.userName+'?';
     document.getElementById('settings-name').value=state.userName;
+    document.getElementById('summary-day').value=state.resetDay!==undefined?state.resetDay:1;
     document.getElementById('done-title').textContent='Good work today, '+state.userName+'.';
     buildSummary();
     goHome();
