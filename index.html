@@ -478,10 +478,34 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Sego
 <div class="modal-overlay" id="modal-add">
   <div class="modal-sheet">
     <div class="modal-title">Add a task</div>
-    <div class="modal-sub">It'll be added to your household list and rated by you before the algorithm can assign it.</div>
+    <div class="modal-sub">Name it and rate it — then it's in the pool.</div>
     <div class="modal-field">
       <label>Task name</label>
-      <input class="modal-input" id="modal-task-name" placeholder="e.g. Clean out junk drawer" />
+      <input class="modal-input" id="modal-task-name" placeholder="e.g. Clean out junk drawer" oninput="checkAddConfirm()" />
+    </div>
+    <div class="dim-block" style="margin-bottom:0.75rem;">
+      <div class="dim-label">Stress <span class="dim-val" id="add-stress-val">—</span></div>
+      <div class="pip-row" id="add-stress-pips">
+        <div class="pip" onclick="addRate('stress',1)" data-val="1">a little</div>
+        <div class="pip" onclick="addRate('stress',2)" data-val="2">a lot</div>
+        <div class="pip" onclick="addRate('stress',3)" data-val="3">constantly</div>
+      </div>
+    </div>
+    <div class="dim-block" style="margin-bottom:0.75rem;">
+      <div class="dim-label">Effort <span class="dim-val" id="add-effort-val">—</span></div>
+      <div class="pip-row" id="add-effort-pips">
+        <div class="pip" onclick="addRate('effort',1)" data-val="1">easy</div>
+        <div class="pip" onclick="addRate('effort',2)" data-val="2">meh</div>
+        <div class="pip" onclick="addRate('effort',3)" data-val="3">ugh</div>
+      </div>
+    </div>
+    <div class="dim-block" style="margin-bottom:0.75rem;">
+      <div class="dim-label">Reward <span class="dim-val" id="add-reward-val">—</span></div>
+      <div class="pip-row" id="add-reward-pips">
+        <div class="pip" onclick="addRate('reward',1)" data-val="1">fine</div>
+        <div class="pip" onclick="addRate('reward',2)" data-val="2">good</div>
+        <div class="pip" onclick="addRate('reward',3)" data-val="3">so good</div>
+      </div>
     </div>
     <div class="modal-field">
       <label>How often does it need doing?</label>
@@ -496,7 +520,7 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Sego
     </div>
     <div class="modal-actions">
       <button class="modal-cancel" onclick="closeModal('modal-add')">Cancel</button>
-      <button class="modal-confirm" onclick="confirmAddTask()">Add task</button>
+      <button class="modal-confirm" id="add-confirm-btn" onclick="confirmAddTask()" disabled>Add task</button>
     </div>
   </div>
 </div>
@@ -1086,21 +1110,42 @@ function checkAddBtn(){
   document.getElementById('add-task-btn').disabled=document.getElementById('new-task-input').value.trim().length<2;
 }
 
+let addRatings = {stress:null,effort:null,reward:null};
+
+function addRate(dim,val){
+  addRatings[dim]=val;
+  document.querySelectorAll('#add-'+dim+'-pips .pip').forEach(p=>p.classList.remove('s1','s2','s3'));
+  document.querySelectorAll('#add-'+dim+'-pips .pip').forEach(p=>{if(parseInt(p.dataset.val)===val)p.classList.add('s'+val);});
+  document.getElementById('add-'+dim+'-val').textContent=VLS[dim][val-1];
+  checkAddConfirm();
+}
+
+function checkAddConfirm(){
+  const name=document.getElementById('modal-task-name').value.trim();
+  const allRated=addRatings.stress&&addRatings.effort&&addRatings.reward;
+  document.getElementById('add-confirm-btn').disabled=!(name.length>=2&&allRated);
+}
+
 function showAddModal(){
   const name=document.getElementById('new-task-input').value.trim();
   if(name.length<2)return;
+  addRatings={stress:null,effort:null,reward:null};
+  ['stress','effort','reward'].forEach(d=>{
+    document.querySelectorAll('#add-'+d+'-pips .pip').forEach(p=>p.classList.remove('s1','s2','s3'));
+    document.getElementById('add-'+d+'-val').textContent='—';
+  });
   document.getElementById('modal-task-name').value=name;
+  document.getElementById('add-confirm-btn').disabled=true;
   document.getElementById('modal-add').classList.add('visible');
 }
 
 function confirmAddTask(){
   const name=document.getElementById('modal-task-name').value.trim();
   const freq=parseInt(document.getElementById('modal-task-freq').value);
-  if(name.length<2)return;
+  if(name.length<2||!addRatings.stress||!addRatings.effort||!addRatings.reward)return;
   const tier=freq<=2?'low':freq<=4?'mid':'high';
   state.tasks.push({name,time:'varies',doneNote:'Done. That one counts.',decayDays:freq,effortTier:tier,enabled:true,custom:true});
-  state.ratings[name]={stress:2,effort:2,reward:2};
-  state.completedAt[name]=Date.now();
+  state.ratings[name]={...addRatings};
   document.getElementById('new-task-input').value='';
   document.getElementById('add-task-btn').disabled=true;
   closeModal('modal-add');
