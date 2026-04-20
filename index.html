@@ -597,13 +597,10 @@ function getReason(r,energy){
 let state = loadState();
 
 function defaultState(){
-  const now = Date.now();
-  const completedAt = {};
-  DEFAULT_TASKS.forEach(t => { completedAt[t.name] = now; });
   return {
     userName:'', onboarded:false,
     tasks: DEFAULT_TASKS.map(t=>({...t,enabled:true})),
-    ratings:{}, completedAt,
+    ratings:{}, completedAt:{},
     sessionCompleted:[], sessionSkipped:[],
     weekCompleted:[], weekMinutes:0,
     currentEnergy:'mid', currentTask:null,
@@ -742,12 +739,6 @@ function advanceCard(isNA){
       state.tasks.forEach(t=>{
         if(state.ratings[t.name]&&state.ratings[t.name].na) t.enabled = false;
       });
-      // set install date as day zero
-      const now = Date.now();
-      state.tasks.forEach(t=>{
-        if(!state.ratings[t.name]||state.ratings[t.name].na) return;
-        state.completedAt[t.name] = now;
-      });
       state.onboarded = true;
       saveState();
       buildSummary();
@@ -846,6 +837,8 @@ function scoreTask(name,energy){
   if((r.effort||1)>EAC[energy])return -1;
   // already done this session — skip
   if(state.sessionCompleted.includes(name))return -1;
+  // within decay window — skip
+  if(state.completedAt[name] && !isOverdue(t))return -1;
   return (r.stress||1)*3+(r.reward||1)*2+(r.effort||1)*-1;
 }
 
