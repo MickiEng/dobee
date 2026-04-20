@@ -501,6 +501,42 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Sego
   </div>
 </div>
 
+<!-- RATE TO ENABLE MODAL -->
+<div class="modal-overlay" id="modal-rate-enable">
+  <div class="modal-sheet">
+    <div class="modal-title" id="rte-task-name"></div>
+    <div class="modal-sub">Rate this task to add it to your pool.</div>
+    <div class="dim-block">
+      <div class="dim-label">Stress <span class="dim-val" id="rte-stress-val">—</span></div>
+      <div class="pip-row" id="rte-stress-pips">
+        <div class="pip" onclick="rteRate('stress',1)" data-val="1">a little</div>
+        <div class="pip" onclick="rteRate('stress',2)" data-val="2">a lot</div>
+        <div class="pip" onclick="rteRate('stress',3)" data-val="3">constantly</div>
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-label">Effort <span class="dim-val" id="rte-effort-val">—</span></div>
+      <div class="pip-row" id="rte-effort-pips">
+        <div class="pip" onclick="rteRate('effort',1)" data-val="1">easy</div>
+        <div class="pip" onclick="rteRate('effort',2)" data-val="2">meh</div>
+        <div class="pip" onclick="rteRate('effort',3)" data-val="3">ugh</div>
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-label">Reward <span class="dim-val" id="rte-reward-val">—</span></div>
+      <div class="pip-row" id="rte-reward-pips">
+        <div class="pip" onclick="rteRate('reward',1)" data-val="1">fine</div>
+        <div class="pip" onclick="rteRate('reward',2)" data-val="2">good</div>
+        <div class="pip" onclick="rteRate('reward',3)" data-val="3">so good</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('modal-rate-enable')">Cancel</button>
+      <button class="modal-confirm" id="rte-save-btn" onclick="saveRteRating()" disabled>Enable task</button>
+    </div>
+  </div>
+</div>
+
 <div class="bottom-nav" id="bottom-nav" style="display:none;">
   <button class="bottom-nav-btn active" id="nav-home" onclick="navTo('s-energy','nav-home'); goHome();">
     <div class="bottom-nav-icon">🏠</div><div class="bottom-nav-label">Home</div>
@@ -696,16 +732,16 @@ function rate(dim,val){
 function advanceCard(isNA){
   const enabledTasks = state.tasks.filter(t=>t.enabled);
   onboardRatings[enabledTasks[onboardIdx].name] = isNA ? {na:true} : {...curRatings};
-  if(isNA){
-    const naTask = state.tasks.find(t=>t.name===enabledTasks[onboardIdx].name);
-    if(naTask) naTask.enabled = false;
-  }
   const card = document.getElementById('card-front');
   card.classList.add('exit-left');
   setTimeout(()=>{
     onboardIdx++;
     if(onboardIdx >= enabledTasks.length){
       state.ratings = {...onboardRatings};
+      // apply enabled:false to NA tasks now that onboarding is complete
+      state.tasks.forEach(t=>{
+        if(state.ratings[t.name]&&state.ratings[t.name].na) t.enabled = false;
+      });
       // set install date as day zero
       const now = Date.now();
       state.tasks.forEach(t=>{
@@ -999,9 +1035,49 @@ function confirmDeleteTask(i){
   if(el) el.style.display='block';
 }
 
+let rteTaskIdx = null;
+let rteRatings = {stress:null,effort:null,reward:null};
+
 function toggleTask(i){
-  state.tasks[i].enabled=!state.tasks[i].enabled;
-  saveState();renderSettingsTaskList();
+  const t = state.tasks[i];
+  // turning on a task that was marked NA — prompt to rate first
+  if(!t.enabled && state.ratings[t.name] && state.ratings[t.name].na){
+    openRteModal(i);
+    return;
+  }
+  t.enabled = !t.enabled;
+  saveState(); renderSettingsTaskList();
+}
+
+function openRteModal(i){
+  rteTaskIdx = i;
+  rteRatings = {stress:null,effort:null,reward:null};
+  document.getElementById('rte-task-name').textContent = state.tasks[i].name;
+  ['stress','effort','reward'].forEach(d=>{
+    document.querySelectorAll('#rte-'+d+'-pips .pip').forEach(p=>p.classList.remove('s1','s2','s3'));
+    document.getElementById('rte-'+d+'-val').textContent='—';
+  });
+  document.getElementById('rte-save-btn').disabled = true;
+  document.getElementById('modal-rate-enable').classList.add('visible');
+}
+
+function rteRate(dim,val){
+  rteRatings[dim]=val;
+  document.querySelectorAll('#rte-'+dim+'-pips .pip').forEach(p=>p.classList.remove('s1','s2','s3'));
+  document.querySelectorAll('#rte-'+dim+'-pips .pip').forEach(p=>{if(parseInt(p.dataset.val)===val)p.classList.add('s'+val);});
+  document.getElementById('rte-'+dim+'-val').textContent=VLS[dim][val-1];
+  const allDone = rteRatings.stress&&rteRatings.effort&&rteRatings.reward;
+  document.getElementById('rte-save-btn').disabled = !allDone;
+}
+
+function saveRteRating(){
+  if(rteTaskIdx===null)return;
+  const t = state.tasks[rteTaskIdx];
+  state.ratings[t.name] = {...rteRatings};
+  t.enabled = true;
+  delete state.completedAt[t.name]; // no completedAt so it enters pool immediately
+  saveState(); renderSettingsTaskList();
+  closeModal('modal-rate-enable');
 }
 
 function deleteTask(i){
