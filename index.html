@@ -369,7 +369,7 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Sego
       <div class="stat-card"><div class="stat-label">time this week</div><div class="stat-val" id="w-time">0 min</div></div>
     </div>
     <div class="section-block"><div class="section-label">what you took care of</div><div id="w-done-list"></div></div>
-    <div class="section-block" id="w-waiting-section"><div class="section-label">still waiting</div><div id="w-waiting-list"></div></div>
+    <div class="section-block" id="w-waiting-section"><div class="section-label">helpful if you can</div><div id="w-waiting-list"></div></div>
     <div class="week-note" id="w-note"></div>
     <button class="primary-btn" onclick="startNewWeek()">Start next week</button>
   </div>
@@ -988,7 +988,6 @@ function buildWeeklySummary(){
   const done=state.weekCompleted;
   const rated=Object.keys(state.ratings).filter(k=>!state.ratings[k].na);
   const overdue=state.tasks.filter(t=>t.enabled&&rated.includes(t.name)&&isOverdue(t)&&!done.find(d=>d.name===t.name));
-  const waiting=state.tasks.filter(t=>t.enabled&&rated.includes(t.name)&&!done.find(d=>d.name===t.name)&&!overdue.find(o=>o.name===t.name)).slice(0,3);
   const doneName=done.length>0?state.userName:'';
   document.getElementById('weekly-title').textContent=doneName?'This week, '+doneName+'.':'This week.';
   document.getElementById('w-done-count').textContent=done.length;
@@ -997,9 +996,8 @@ function buildWeeklySummary(){
   if(!done.length){doneEl.innerHTML='<div class="empty-note">Nothing logged this week — that\'s okay.</div>';}
   else{doneEl.innerHTML=done.map(d=>'<div class="task-row"><span class="task-row-name">'+d.name+'</span><span class="task-tag tag-done">done</span></div>').join('');}
   const ws=document.getElementById('w-waiting-section');
-  const combined=[...overdue.map(t=>({name:t.name,overdue:true})),...waiting.map(t=>({name:t.name,overdue:false}))];
-  if(!combined.length){ws.style.display='none';}
-  else{ws.style.display='block';document.getElementById('w-waiting-list').innerHTML=combined.map(t=>'<div class="task-row"><span class="task-row-name">'+t.name+'</span><span class="task-tag '+(t.overdue?'tag-overdue':'tag-waiting')+'">'+(t.overdue?'overdue':'up next')+'</span></div>').join('');}
+  if(!overdue.length){ws.style.display='none';}
+  else{ws.style.display='block';document.getElementById('w-waiting-list').innerHTML=overdue.map(t=>'<div class="task-row"><span class="task-row-name">'+t.name+'</span><span class="task-tag tag-overdue">overdue</span></div>').join('');}
   document.getElementById('w-note').textContent=buildWeekNote(done.length,overdue.length);
 }
 
