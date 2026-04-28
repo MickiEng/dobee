@@ -576,21 +576,21 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Sego
 
 <script>
 const DEFAULT_TASKS = [
-  {name:"Dishes in the sink",time:"10–15 min",doneNote:"Sink is clear. That low-level 'I should do the dishes' thought? Gone.",decayDays:1,effortTier:'low',custom:false},
-  {name:"Empty the dishwasher",time:"5–8 min",doneNote:"Dishwasher is empty. Now the dirty ones actually have somewhere to go.",decayDays:2,effortTier:'low',custom:false},
-  {name:"Kitchen counters",time:"5–8 min",doneNote:"Counters are clear. You'll notice that every time you walk in.",decayDays:1,effortTier:'low',custom:false},
-  {name:"Kitchen sink",time:"3–5 min",doneNote:"Sink is wiped down. Small thing, noticeable every time you use it.",decayDays:1,effortTier:'low',custom:false},
-  {name:"Trash and/or recycling",time:"2–5 min",doneNote:"Gone. One less thing in your line of sight every time you walk by.",decayDays:2,effortTier:'low',custom:false},
-  {name:"Mail / paperwork sorting",time:"10–15 min",doneNote:"Pile is sorted. That stack has been staring at you long enough.",decayDays:3,effortTier:'mid',custom:false},
-  {name:"Laundry — start a load",time:"3–5 min",doneNote:"Load is going. You started it — that's the part that always gets skipped.",decayDays:2,effortTier:'low',custom:false},
-  {name:"Laundry — fold and put away",time:"15–20 min",doneNote:"The pile is gone. That whole part of the room just opened up.",decayDays:4,effortTier:'mid',custom:false},
-  {name:"Vacuuming / sweeping",time:"10–20 min",doneNote:"Fresh floor. The room genuinely feels different now.",decayDays:7,effortTier:'mid',custom:false},
-  {name:"Bathroom sinks and mirrors",time:"8–10 min",doneNote:"You'll see this one every morning. Worth every minute.",decayDays:7,effortTier:'mid',custom:false},
-  {name:"Showers / tubs",time:"10–15 min",doneNote:"Done. So much better to step into now.",decayDays:14,effortTier:'high',custom:false},
-  {name:"Toilets",time:"5–8 min",doneNote:"Done. Always better to just have it handled.",decayDays:7,effortTier:'mid',custom:false},
-  {name:"Make beds",time:"3–5 min",doneNote:"Beds are made. The whole room looks different — you know it does.",decayDays:1,effortTier:'low',custom:false},
-  {name:"Flat surfaces and clutter",time:"5–10 min",doneNote:"One surface clear. Small effort, real difference.",decayDays:3,effortTier:'low',custom:false},
-  {name:"Fridge cleanout",time:"15–20 min",doneNote:"Open fridge, clear mind. Expired stuff out, space reclaimed.",decayDays:14,effortTier:'high',custom:false}
+  {name:"Dishes in the sink",time:"10–15 min",doneNote:"Sink is clear. That low-level 'I should do the dishes' thought? Gone.",decayDays:1,custom:false},
+  {name:"Empty the dishwasher",time:"5–8 min",doneNote:"Dishwasher is empty. Now the dirty ones actually have somewhere to go.",decayDays:2,custom:false},
+  {name:"Kitchen counters",time:"5–8 min",doneNote:"Counters are clear. You'll notice that every time you walk in.",decayDays:1,custom:false},
+  {name:"Kitchen sink",time:"3–5 min",doneNote:"Sink is wiped down. Small thing, noticeable every time you use it.",decayDays:1,custom:false},
+  {name:"Trash and/or recycling",time:"2–5 min",doneNote:"Gone. One less thing in your line of sight every time you walk by.",decayDays:2,custom:false},
+  {name:"Mail / paperwork sorting",time:"10–15 min",doneNote:"Pile is sorted. That stack has been staring at you long enough.",decayDays:3,custom:false},
+  {name:"Laundry — start a load",time:"3–5 min",doneNote:"Load is going. You started it — that's the part that always gets skipped.",decayDays:2,custom:false},
+  {name:"Laundry — fold and put away",time:"15–20 min",doneNote:"The pile is gone. That whole part of the room just opened up.",decayDays:4,custom:false},
+  {name:"Vacuuming / sweeping",time:"10–20 min",doneNote:"Fresh floor. The room genuinely feels different now.",decayDays:7,custom:false},
+  {name:"Bathroom sinks and mirrors",time:"8–10 min",doneNote:"You'll see this one every morning. Worth every minute.",decayDays:7,custom:false},
+  {name:"Showers / tubs",time:"10–15 min",doneNote:"Done. So much better to step into now.",decayDays:14,custom:false},
+  {name:"Toilets",time:"5–8 min",doneNote:"Done. Always better to just have it handled.",decayDays:7,custom:false},
+  {name:"Make beds",time:"3–5 min",doneNote:"Beds are made. The whole room looks different — you know it does.",decayDays:1,custom:false},
+  {name:"Flat surfaces and clutter",time:"5–10 min",doneNote:"One surface clear. Small effort, real difference.",decayDays:3,custom:false},
+  {name:"Fridge cleanout",time:"15–20 min",doneNote:"Open fridge, clear mind. Expired stuff out, space reclaimed.",decayDays:14,custom:false}
 ];
 
 const EAC = {low:1.5,mid:2.5,high:3};
@@ -845,8 +845,9 @@ function updateOverdueHints(){
   let mid=false,high=false;
   state.tasks.filter(t=>t.enabled&&rated.includes(t.name)).forEach(t=>{
     if(!isOverdue(t))return;
-    if(t.effortTier==='mid')mid=true;
-    if(t.effortTier==='high')high=true;
+    const e=state.ratings[t.name]?.effort||1;
+    if(e===2)mid=true;
+    if(e===3)high=true;
   });
   document.getElementById('btn-mid').classList.toggle('has-overdue',mid);
   document.getElementById('btn-high').classList.toggle('has-overdue',high);
@@ -1144,8 +1145,7 @@ function confirmAddTask(){
   const name=document.getElementById('modal-task-name').value.trim();
   const freq=parseInt(document.getElementById('modal-task-freq').value);
   if(name.length<2||!addRatings.stress||!addRatings.effort||!addRatings.reward)return;
-  const tier=freq<=2?'low':freq<=4?'mid':'high';
-  state.tasks.push({name,time:'varies',doneNote:'Done. That one counts.',decayDays:freq,effortTier:tier,enabled:true,custom:true});
+  state.tasks.push({name,time:'varies',doneNote:'Done. That one counts.',decayDays:freq,enabled:true,custom:true});
   state.ratings[name]={...addRatings};
   document.getElementById('new-task-input').value='';
   document.getElementById('add-task-btn').disabled=true;
@@ -1207,7 +1207,6 @@ function saveRating(){
   const t=state.tasks.find(t=>t.name===editingTask);
   if(t){
     t.decayDays=freq;
-    t.effortTier=freq<=2?'low':freq<=4?'mid':'high';
   }
   saveState();
   const toast=document.getElementById('saved-toast');
