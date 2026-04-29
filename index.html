@@ -763,6 +763,12 @@ function advanceCard(isNA){
       state.tasks.forEach(t=>{
         if(state.ratings[t.name]&&state.ratings[t.name].na) t.enabled = false;
       });
+      // seed all enabled tasks as completed yesterday so they're available on day 1
+      // but won't be falsely overdue
+      const yesterday = new Date(new Date().toDateString()).getTime() - MS_DAY;
+      state.tasks.forEach(t=>{
+        if(t.enabled && !state.completedAt[t.name]) state.completedAt[t.name] = yesterday;
+      });
       state.onboarded = true;
       saveState();
       buildSummary();
@@ -837,7 +843,9 @@ function buildSumClosing(s,a,w){
 function isOverdue(task){
   const last = state.completedAt[task.name];
   if(!last) return false;
-  return (Date.now()-last)/MS_DAY >= task.decayDays;
+  const lastMidnight = new Date(new Date(last).toDateString()).getTime();
+  const todayMidnight = new Date(new Date().toDateString()).getTime();
+  return (todayMidnight - lastMidnight) / MS_DAY >= task.decayDays;
 }
 
 function updateOverdueHints(){
@@ -1147,6 +1155,7 @@ function confirmAddTask(){
   if(name.length<2||!addRatings.stress||!addRatings.effort||!addRatings.reward)return;
   state.tasks.push({name,time:'varies',doneNote:'Done. That one counts.',decayDays:freq,enabled:true,custom:true});
   state.ratings[name]={...addRatings};
+  state.completedAt[name] = new Date(new Date().toDateString()).getTime() - MS_DAY;
   document.getElementById('new-task-input').value='';
   document.getElementById('add-task-btn').disabled=true;
   closeModal('modal-add');
